@@ -5,7 +5,6 @@ import TrackingMap from './TrackingMap';
 import ShipmentTimeline from './ShipmentTimeline';
 import { FDX_LOGO_WHITE_URL } from '../lib/config';
 import { motion, AnimatePresence } from 'framer-motion';
-import { io } from 'socket.io-client';
 
 const TrackingView: React.FC = () => {
   const [trackingId, setTrackingId] = useState('');
@@ -13,17 +12,30 @@ const TrackingView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Socket setup for real-time updates
+  // Socket setup for real-time updates in local development only.
   useEffect(() => {
-    if (shipment?.id) {
-      const socket = io();
+    if (!shipment?.id || import.meta.env.PROD) {
+      return;
+    }
+
+    let socket: any;
+    let active = true;
+
+    const connectSocket = async () => {
+      const { io } = await import('socket.io-client');
+      if (!active) return;
+      socket = io();
       socket.on(`shipment_update:${shipment.id}`, (updatedShipment: Shipment) => {
         setShipment(updatedShipment);
       });
-      return () => {
-        socket.disconnect();
-      };
-    }
+    };
+
+    connectSocket();
+
+    return () => {
+      active = false;
+      socket?.disconnect?.();
+    };
   }, [shipment?.id]);
 
   const handleSearch = async (e: React.FormEvent) => {

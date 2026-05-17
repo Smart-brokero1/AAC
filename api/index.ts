@@ -1,9 +1,6 @@
+import "dotenv/config";
 import express from "express";
-import fs from "fs/promises";
-import path from "path";
-import { put, list } from "@vercel/blob";
-
-const SHIPMENTS_FILE = path.join(process.cwd(), 'shipments.json');
+import { getShipments, saveShipments, checkFirebaseConnection } from "../lib/storage";
 
 const sanitizeString = (value: any) => {
   if (typeof value !== 'string') return '';
@@ -60,80 +57,14 @@ app.post("/api/admin/login", (req, res) => {
   }
 });
 
-// Default data
-const defaultShipments = [
-  {
-      id: "TRK-1001",
-      customerName: "Hajnalka Göblyös",
-      packageName: "Frost Blue Model 3 Performance With 10,000$ cash",
-      origin: { lat: 34.0522, lng: -118.2437, name:  "San Francisco Office" }, // LA
-      destination: { lat: 46.66036032272335, lng: 20.595707996270267, name: "5932 Gádoros, Darányi utca 39,Magyarország" }, // SF
-      progress: 45,
-      status: "In Transit",  
-      timeline: [
-        { status: "Order Processed", time: "2024-05-14 08:00 AM" },
-        { status: "Shipped from Origin", time: "2024-05-14 10:30 AM" },
-        { status: "In Transit", time: "2024-05-15 11:00 AM" },
-      ],
-    }
-];
-
-// In-memory fallback
-let memoryShipments = [...defaultShipments];
-
-// Helper to get shipments (from Blob if available, else memory)
-async function getShipments() {
-  try {
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const { blobs } = await list({ prefix: 'shipments.json' });
-      if (blobs.length > 0) {
-        const response = await fetch(blobs[0].url);
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          return data as any[];
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Blob get error:", error);
-  }
-
-  try {
-    const file = await fs.readFile(SHIPMENTS_FILE, 'utf-8');
-    const data = JSON.parse(file);
-    if (Array.isArray(data)) {
-      memoryShipments = data;
-      return data;
-    }
-  } catch (error) {
-    if ((error as any).code !== 'ENOENT') {
-      console.error("Local shipment file read error:", error);
-    }
-  }
-
-  return memoryShipments;
-}
-
-// Helper to save shipments
-async function saveShipments(shipments: any[]) {
-  memoryShipments = shipments;
-  try {
-    await fs.writeFile(SHIPMENTS_FILE, JSON.stringify(shipments, null, 2), 'utf-8');
-  } catch (error) {
-    console.error("Local shipment file write error:", error);
-  }
-
-  try {
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      await put('shipments.json', JSON.stringify(shipments), {
-        access: 'public',
-        addRandomSuffix: false
-      });
-    }
-  } catch (error) {
-    console.error("Blob set error:", error);
-  }
-}
+app.get("/api/health", async (req, res) => {
+  const firebaseActive = await checkFirebaseConnection();
+  res.json({
+    status: "ok",
+    firebase: firebaseActive,
+    firebaseProjectId: process.env.FIREBASE_PROJECT_ID || "fdxx-13207",
+  });
+});
 
 // API Routes
 app.get("/api/shipments", adminAuth, async (req, res) => {

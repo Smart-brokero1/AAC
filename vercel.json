@@ -1,4 +1,5 @@
 {
+  "name": "fdx-logistics",
   "rewrites": [
     {
       "source": "/api/(.*)",

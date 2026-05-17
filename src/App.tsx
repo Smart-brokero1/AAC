@@ -4,16 +4,20 @@
  */
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import TrackingView from './components/TrackingView';
-import AdminPortal from './components/AdminPortal';
+import { lazy, Suspense } from 'react';
+
+const TrackingView = lazy(() => import('./components/TrackingView'));
+const AdminPortal = lazy(() => import('./components/AdminPortal'));
 
 export default function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<TrackingView />} />
-        <Route path="/admin" element={<AdminPortal />} />
-      </Routes>
+      <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<TrackingView />} />
+          <Route path="/admin" element={<AdminPortal />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }
