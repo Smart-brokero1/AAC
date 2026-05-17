@@ -41,9 +41,12 @@ async function startServer() {
     res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    const isDev = process.env.NODE_ENV !== "production";
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org ws: wss:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+      isDev
+        ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org ws: wss: localhost:*; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
+        : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';"
     );
     next();
   });
